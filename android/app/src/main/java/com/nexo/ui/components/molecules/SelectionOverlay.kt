@@ -26,6 +26,7 @@ import com.nexo.presentation.viewmodel.reader.DefinitionPanelState
 import com.nexo.presentation.viewmodel.reader.ReaderSelectionState
 import com.nexo.presentation.viewmodel.reader.TranslationPanelState
 import com.nexo.ui.theme.NexoTheme
+import kotlin.math.roundToInt
 
 /** Thin orchestrator — delegates anchoring to AnchoredOverlayBox + computeAnchor. */
 @Composable
@@ -85,14 +86,23 @@ fun SelectionOverlay(
     // once, is what lets `AnchoredOverlayBox` convert every surface at exactly
     // one point. `null` means "already in the overlay's space".
     val selectionSource = currentSelectionSource()
+    // A PDF.js selection arrives in the WebView viewport's CSS px and there is no
+    // Readium fragment to translate against; see [pdfSelectionRectInOverlayPx] for
+    // the measured factors. `null` is the documented way to tell
+    // `SelectionOverlaySpace` the rect is already in this overlay's space, so every
+    // surface below converts exactly once, here.
+    val pdfAnchor = (selectionState as? ReaderSelectionState.New)?.pdfAnchor
+    val anchorRect =
+        if (pdfAnchor != null) pdfSelectionRectInOverlayPx(selectionRect, LocalDensity.current.density) else selectionRect
+    val anchorSource = if (pdfAnchor != null) null else selectionSource
     val palette = remember(customHighlightColors) { highlightPalette(customHighlightColors) }
     if (anyMenuVisible) {
         Box(modifier = Modifier.fillMaxSize().clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { onDismissContextMenu() })
     }
     if (selectionState is ReaderSelectionState.New && !showTagInput && !showDefinitionInput && !showColorPickerPopover && !showTranslationPanel && !showDefinitionPanel) {
         AnchoredOverlayBox(
-            selectionRect = selectionRect,
-            webView = selectionSource,
+            selectionRect = anchorRect,
+            webView = anchorSource,
             viewportWidth = viewportWidth,
             viewportHeight = viewportHeight,
             gapDp = SELECTION_MENU_GAP_DP,
@@ -106,8 +116,8 @@ fun SelectionOverlay(
         // Keyed by highlight so tapping another one never inherits the palette mode.
         key(selectionState.highlight.id) {
             AnchoredOverlayBox(
-                selectionRect = selectionRect,
-                webView = selectionSource,
+                selectionRect = anchorRect,
+                webView = anchorSource,
                 viewportWidth = viewportWidth,
                 viewportHeight = viewportHeight,
                 gapDp = SELECTION_MENU_GAP_DP,
@@ -131,7 +141,7 @@ fun SelectionOverlay(
         }
     }
     if (showTagInput) {
-        AnchoredOverlayBox(selectionRect = selectionRect, webView = selectionSource, viewportWidth = viewportWidth, viewportHeight = viewportHeight, modifier = modifier) {
+        AnchoredOverlayBox(selectionRect = anchorRect, webView = anchorSource, viewportWidth = viewportWidth, viewportHeight = viewportHeight, modifier = modifier) {
             AnchoredTagInput(tag = activeTagText, suggestions = tagSuggestions, onTagChange = onTagTextChanged, onSuggestionClick = { tag ->
                 onTagTextChanged(tag)
                 onSaveTag()
@@ -139,7 +149,7 @@ fun SelectionOverlay(
         }
     }
     if (showDefinitionInput) {
-        AnchoredOverlayBox(selectionRect = selectionRect, webView = selectionSource, viewportWidth = viewportWidth, viewportHeight = viewportHeight, modifier = modifier) {
+        AnchoredOverlayBox(selectionRect = anchorRect, webView = anchorSource, viewportWidth = viewportWidth, viewportHeight = viewportHeight, modifier = modifier) {
             AnchoredDefinitionInput(word = selectedText ?: "", definition = activeDefinitionText, onDefinitionChange = onDefinitionTextChanged, onSave = onSaveDefinition, onDismiss = onDismissDefinitionInput)
         }
     }
@@ -151,8 +161,8 @@ fun SelectionOverlay(
     LaunchedEffect(showDefinitionPanel) { if (showDefinitionPanel && showTranslationPanel) onDismissTranslation() }
     if (showTranslationPanel) {
         AnchoredOverlayBox(
-            selectionRect = selectionRect,
-            webView = selectionSource,
+            selectionRect = anchorRect,
+            webView = anchorSource,
             viewportWidth = viewportWidth,
             viewportHeight = viewportHeight,
             gapDp = SELECTION_MENU_GAP_DP,
@@ -170,8 +180,8 @@ fun SelectionOverlay(
         }
     } else if (showDefinitionPanel) {
         AnchoredOverlayBox(
-            selectionRect = selectionRect,
-            webView = selectionSource,
+            selectionRect = anchorRect,
+            webView = anchorSource,
             viewportWidth = viewportWidth,
             viewportHeight = viewportHeight,
             gapDp = SELECTION_MENU_GAP_DP,
@@ -195,7 +205,7 @@ fun SelectionOverlay(
         // Readium's space. It is the one surface that must remember to convert;
         // `SelectionOverlayPlacementTest` pins the popover's conversion to the
         // shared one, so a future third producer that diverges fails there.
-        val placement = rememberOverlayPlacement(selectionRect, selectionSource)
+        val placement = rememberOverlayPlacement(anchorRect, anchorSource)
         val density = LocalDensity.current
         val anchorCenterX = placement.left + (placement.right - placement.left) / 2
         val anchorBelowY = placement.bottom + with(density) { 12.dp.toPx() }.toInt()
@@ -276,6 +286,36 @@ internal fun overlayPlacementRect(
     webView: android.view.View?,
     fallbackOrigin: android.view.View,
 ): Rect = SelectionOverlaySpace.of(rect, webView, fallbackOrigin).rect
+
+/**
+ * A PDF.js selection rect expressed in this overlay's space.
+ *
+ * PDF.js posts `Range.getBoundingClientRect()` untouched: **viewport CSS px of
+ * the WebView**, where one CSS px is `window.devicePixelRatio` device px.
+ * Measured on the `dev_clean` AVD (420 dpi, 1080 px wide): `devicePixelRatio`
+ * = 2.625 = `DisplayMetrics.density`, and the viewer's
+ * `<meta name="viewport" content="width=device-width, initial-scale=1,
+ * maximum-scale=1">` is what pins the layout scale at 1 and keeps the two equal.
+ * Compose's `LocalDensity.density` is that same number.
+ *
+ * There is deliberately no origin term. The reader content and this overlay are
+ * siblings inside ONE Box (`ReaderScreenContentHost`'s PDF.js branch), so the
+ * WebView's viewport origin IS the origin `AnchoredOverlayBox` places from.
+ * Measured: the WebView sits at window y = 128 (the reader's status-bar inset)
+ * and so does that Box; feeding the WebView to [SelectionOverlaySpace.of] as a
+ * source would add that 128 px a second time, which is the 128 px defect the
+ * EPUB path documents.
+ */
+internal fun pdfSelectionRectInOverlayPx(
+    rect: Rect,
+    cssToDevicePx: Float,
+): Rect =
+    Rect(
+        (rect.left * cssToDevicePx).roundToInt(),
+        (rect.top * cssToDevicePx).roundToInt(),
+        (rect.right * cssToDevicePx).roundToInt(),
+        (rect.bottom * cssToDevicePx).roundToInt(),
+    )
 
 private enum class SelectionSurface { TEXT_MENU, CONTEXT_MENU, TAG_INPUT, DEFINITION_INPUT, COLOR_PICKER }
 
