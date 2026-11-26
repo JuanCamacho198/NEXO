@@ -300,6 +300,7 @@ internal class SelectionManager(
     fun onHighlightTapped(
         highlight: Highlight,
         rect: RectF,
+        pdfViewportRect: Boolean = false,
     ) {
         DebugLog.info(TAG, "onHighlightTapped id=${highlight.id} t=${SystemClock.elapsedRealtime()}")
         val selectionRect = toNormalizedRect(rect)
@@ -315,7 +316,7 @@ internal class SelectionManager(
         )
         store.update {
             it.copy(
-                selectionState = ReaderSelectionState.Existing(highlight, selectionRect),
+                selectionState = ReaderSelectionState.Existing(highlight, selectionRect, pdfViewportRect),
                 selectedText = highlight.textContent,
                 selectionRect = selectionRect,
             )

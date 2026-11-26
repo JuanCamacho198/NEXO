@@ -9,7 +9,9 @@ import android.util.Log
 import android.view.ActionMode
 import android.view.Menu
 import android.view.MenuItem
+import android.view.MotionEvent
 import android.view.View
+import android.view.ViewConfiguration
 import android.webkit.ConsoleMessage
 import android.webkit.RenderProcessGoneDetail
 import android.webkit.WebChromeClient
@@ -44,6 +46,7 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.InputStream
 import java.io.SequenceInputStream
+import kotlin.math.hypot
 
 object PdfJsSpike {
     const val ENABLED = true
@@ -97,6 +100,42 @@ private var toolbarSuppressionLogged = false
 private class NoToolbarWebView(
     context: Context,
 ) : WebView(context) {
+    /**
+     * Reports a tap in this WebView's own view pixels — the overlay's pixels too,
+     * since both are siblings of one Box. The callback only reads: the super call
+     * still performs the click, so a tap that hits no highlight is unchanged.
+     */
+    var onTap: ((Float, Float) -> Unit)? = null
+
+    private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
+    private val longPressTimeout = ViewConfiguration.getLongPressTimeout()
+    private var downX = 0f
+    private var downY = 0f
+    private var downAt = 0L
+    private var dragged = false
+
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        val handled = super.onTouchEvent(event)
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                downX = event.x
+                downY = event.y
+                downAt = event.eventTime
+                dragged = false
+            }
+            MotionEvent.ACTION_MOVE -> {
+                // Any real movement is a scroll or a selection drag, never a tap.
+                if (!dragged && hypot(event.x - downX, event.y - downY) > touchSlop) dragged = true
+            }
+            MotionEvent.ACTION_UP -> {
+                // Longer than the long-press timeout is a press: it may start a text
+                // selection, and a highlight tap must not race that.
+                if (!dragged && event.eventTime - downAt < longPressTimeout) onTap?.invoke(event.x, event.y)
+            }
+        }
+        return handled
+    }
+
     override fun startActionMode(callback: ActionMode.Callback): ActionMode? = super.startActionMode(EmptyToolbarCallback(callback))
 
     override fun startActionMode(
@@ -156,6 +195,7 @@ fun PdfJsReaderContent(
     modifier: Modifier = Modifier,
 ) {
     val currentViewModel by rememberUpdatedState(viewModel)
+    val currentDensity by rememberUpdatedState(LocalDensity.current.density)
     val startPage = remember { viewModel.sessionUiState.value.currentPdfPage + 1 }
     var webView by remember { mutableStateOf<WebView?>(null) }
     // The page's offset and scale inside the WebView, as the last `viewport`
@@ -251,6 +291,23 @@ fun PdfJsReaderContent(
                         }
                     } else {
                         DebugLog.error(TAG, "WEB_MESSAGE_LISTENER not supported")
+                    }
+                    onTap = { x, y ->
+                        val opened =
+                            handlePdfTap(
+                                x = x,
+                                y = y,
+                                viewport = viewportState.value,
+                                highlights = currentViewModel.annotationUiState.value.highlights,
+                                density = currentDensity,
+                            ) { highlight, rect ->
+                                currentViewModel.interactionHolder.onHighlightTapped(
+                                    highlight = highlight,
+                                    rect = rect,
+                                    pdfViewportRect = true,
+                                )
+                            }
+                        if (opened != null) DebugLog.info(TAG, "highlight tapped id=$opened")
                     }
                     DebugLog.info(TAG, "open at page $startPage")
                     loadUrl("$ORIGIN/assets/pdfjs/viewer.html?page=$startPage")

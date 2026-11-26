@@ -91,10 +91,15 @@ fun SelectionOverlay(
     // the measured factors. `null` is the documented way to tell
     // `SelectionOverlaySpace` the rect is already in this overlay's space, so every
     // surface below converts exactly once, here.
+    //
+    // A tapped PDF highlight arrives in that same space — the painted box and the
+    // selection pill must agree on the word — so it takes the same path, decided by
+    // the flag its producer set rather than guessed from the highlight's page.
     val pdfAnchor = (selectionState as? ReaderSelectionState.New)?.pdfAnchor
+    val pdfRect = pdfAnchor != null || (selectionState as? ReaderSelectionState.Existing)?.pdfViewportRect == true
     val anchorRect =
-        if (pdfAnchor != null) pdfSelectionRectInOverlayPx(selectionRect, LocalDensity.current.density) else selectionRect
-    val anchorSource = if (pdfAnchor != null) null else selectionSource
+        if (pdfRect) pdfSelectionRectInOverlayPx(selectionRect, LocalDensity.current.density) else selectionRect
+    val anchorSource = if (pdfRect) null else selectionSource
     val palette = remember(customHighlightColors) { highlightPalette(customHighlightColors) }
     if (anyMenuVisible) {
         Box(modifier = Modifier.fillMaxSize().clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { onDismissContextMenu() })
