@@ -1,6 +1,6 @@
 # Roadmap — Lector PDF con PDF.js (Android)
 
-Rama: `feat/android-pdfjs-reader`. Estado: Fase 0 y Fase 1 cerradas (2026-11-25) para PDFs de texto. Fase 2 en curso.
+Rama: `feat/android-pdfjs-reader`. Estado: Fase 0, 1 y 2 cerradas (2026-11-26). Fase 3 (resaltados) es la siguiente.
 
 ## Por qué
 
@@ -34,9 +34,13 @@ Rama: `feat/android-pdfjs-reader`. Estado: Fase 0 y Fase 1 cerradas (2026-11-25)
 
 ### Selección
 
-- JS escucha `selectionchange` y envía `{pageNumber, text, rects}` a Kotlin por `WebViewCompat.addWebMessageListener`, con `allowedOriginRules` limitado al origen del loader. No `addJavascriptInterface`.
+- JS escucha `selectionchange` y envía `{pageNumber, text, rects, bounds, scale}` a Kotlin por `WebViewCompat.addWebMessageListener`, con `allowedOriginRules` limitado al origen del loader. No `addJavascriptInterface`.
+  - `pageNumber` 1-based (viene de `data-page-number`; Kotlin NO lo resta en la ruta de selección).
+  - `rects`: relativos a la página, escala 1, origen arriba-izquierda (formato de persistencia de Fase 3), ya divididos por `scale` en JS.
+  - `bounds`: `getBoundingClientRect()` crudo = px CSS del viewport del WebView; es el único campo en espacio de vista. Ancla el menú.
+  - `scale`: `viewer.currentScale || 1`.
 - Kotlin alimenta los menús Compose existentes.
-- ActionMode nativo suprimido con `setCustomSelectionActionModeCallback`, como en EPUB.
+- ActionMode nativo suprimido sobreescribiendo `WebView.startActionMode` en una subclase que vacía el menú (`PdfJsReaderContent.kt`, `NoToolbarWebView`), no con `setCustomSelectionActionModeCallback`.
 
 ### Resaltados
 
@@ -66,6 +70,8 @@ Rama: `feat/android-pdfjs-reader`. Estado: Fase 0 y Fase 1 cerradas (2026-11-25)
 | 4 — Navegación | Moverse por el documento | Índice (outline), enlaces internos, marcadores, búsqueda de texto | Cada función usable en un PDF real |
 | 5 — Endurecimiento y rendimiento | Producción | CSP, `maxCanvasPixels`, PDFs grandes, liberar páginas fuera de pantalla, decisión legacy/modern, retirar el adaptador pdfium si ya no se usa | PDFs grandes fluidos sin OOM; adaptador pdfium retirado o justificado |
 | Futuro (opcional) | Modo "texto" (reflow) | Convierte PDFs de texto corrido a EPUB para el lector EPUB | — |
+
+Estado: 0 cerrada, 1 cerrada, 2 cerrada (2026-11-26), 3 siguiente. Fase 4 (navegación: índice, enlaces, marcadores, búsqueda) no depende de la 3. Los ajustes de lectura (tema, tamaño, márgenes) no están asignados a ninguna fase: PDF no los aplica hoy.
 
 ## Resultados Fase 0
 
@@ -105,6 +111,15 @@ La app apunta primero a libros normales. Medido en el celular con un PDF escanea
 - Slice 3: reanuda en la página guardada (el loader lee `pdfpage:N` antes de crear el visor; el visor salta y solo después informa, así abrir no sobrescribe la posición). Saltos desde la barra de progreso, zonas de tap y marcadores llegan al visor por un flujo de índice de página. Verificado en emulador.
 - Slice 4: rotación ya funciona sin cambios: la Activity se recrea, el WebView recarga el PDF y abre en la página guardada, ajustado al ancho. Abre al inicio de la página, no en el desplazamiento exacto (inferido). Recargar el PDF en cada rotación puede ser lento en PDFs grandes (no medido).
 
+## Resultados Fase 2
+- El payload completo llega a Kotlin: texto, `rects` (página, escala 1), `bounds` (px CSS de viewport), `scale` y `pageNumber`. Antes solo sobrevivían `empty`, `pageNumber` y el largo del texto.
+- La selección entra por `SelectionManager.onPdfSelection`, que ya existía y estaba testeada pero no tenía llamador. `PdfSelectionAnchor.pageNumber` queda **1-based**, fijado por el test `onPdfSelection keeps the page number 1-based`; el índice 0-based existe solo dentro del dispatch del bridge (`page - 1`). Fase 3 debe respetarlo.
+- El overlay se renderiza en la rama PDF.js como hermano del visor dentro del mismo `Box`, así que el origen del viewport del WebView ES el origen de colocación y no hace falta trasladar. Medido en `dev_clean` (1080×2400, 420 dpi): `window.devicePixelRatio` = 2.625 = `DisplayMetrics.density` = `LocalDensity.density`; el WebView empieza en y=128 por el inset de la barra de estado.
+- Anclaje: sin factor de densidad el menú quedaba sobre la palabra seleccionada (y=280 del content box para una palabra en 415–445). Con densidad ×2.625 queda 31 px debajo. Dos tests fijan la conversión.
+- Los cuatro menús funcionan en un PDF real, verificado en emulador: definir (tarjeta de lookup sobre la palabra), traducir (panel sobre la palabra), copiar (portapapeles real), diccionario ("added to your dictionary"). Descartar la selección y tocar fuera cierran el menú. La rama `Existing` (resaltado tocado) no se alcanza para PDF: no hay locator.
+- Bug preexistente encontrado y corregido en el camino: "Copiar" leía `selectedText` **después** de que `onCopySelectedText()` cerrara el menú, y cerrar lo pone a null → el portapapeles quedaba vacío mientras el snackbar decía "Copied to clipboard". Afectaba también a EPUB y a resaltados tocados. Corregido leyendo antes de la llamada.
+- Defecto abierto (nuevo, fuera de alcance): tras copiar o añadir al diccionario el menú se cierra, pero la selección DOM y las manijas siguen en pantalla.
+
 ## Hallazgos fuera de alcance (no corregidos)
 
 - El diálogo "Ir a página" no se puede abrir: nada en `app/src/main` pone `showGoToPageDialog` a true (afecta a toda la app, no solo PDF).
@@ -122,3 +137,11 @@ La app apunta primero a libros normales. Medido en el celular con un PDF escanea
 ## Decisiones abiertas
 
 - Empaquetado de `pdfjs-dist` en el build de Android: archivos vendorizados en assets vs copia desde un paquete en una tarea Gradle.
+
+## Rendimiento
+Estudio aparte: `docs/pdf-performance-research.md`. Resumen de lo que cambia decisiones:
+- La memoria que crece es del compositor del WebView (GPU service en proceso, memoria nativa). Eso explica por qué `maxCanvasPixels` y quitar `LAYER_TYPE_HARDWARE` no hicieron nada.
+- Dos pruebas baratas sin intentar: cancelar renders en scroll rápido y poner `canvas.width = 0` al destruir la página (libera la textura sin esperar al GC).
+- Lo que de verdad acelera un escaneado es reencodear las imágenes en origen (~150 dpi), no el cliente.
+- `androidx.pdf` queda descartado: exige API 31 + SDK extension 13 y el `minSdk` es 26.
+- OCR on-device (ML Kit) daría capa de texto a los escaneados, con lo que selección, búsqueda, resaltados y traducción empezarían a funcionar en ellos.
