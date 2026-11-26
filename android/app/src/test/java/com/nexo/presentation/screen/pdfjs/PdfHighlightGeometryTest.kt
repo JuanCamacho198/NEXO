@@ -6,6 +6,7 @@ import com.nexo.domain.model.Highlight
 import com.nexo.domain.model.HighlightRect
 import com.nexo.ui.components.molecules.pdfSelectionRectInOverlayPx
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -174,6 +175,41 @@ class PdfHighlightGeometryTest {
     @Test
     fun boundsCss_noRects_isNull() {
         assertNull(pdfHighlightBoundsCss(emptyList(), viewport))
+    }
+
+    @Test
+    fun handlePdfTap_hitsTheHighlightAndReportsItsCssBounds() {
+        var tappedId: String? = null
+        var tappedRect: android.graphics.RectF? = null
+        val returned =
+            handlePdfTap(200f, -200f, viewport, listOf(highlight()), density) { hit, rect ->
+                tappedId = hit.id
+                tappedRect = rect
+            }
+        assertEquals("h1", returned)
+        assertEquals("h1", tappedId)
+        // CSS px, not Compose px: that is what the menu converts, once.
+        val bounds = pdfHighlightBoundsCss(listOf(rect), viewport)!!
+        assertEquals(bounds.left, tappedRect!!.left, 0.01f)
+        assertEquals(bounds.top, tappedRect.top, 0.01f)
+        assertEquals(bounds.right, tappedRect.right, 0.01f)
+        assertEquals(bounds.bottom, tappedRect.bottom, 0.01f)
+    }
+
+    @Test
+    fun handlePdfTap_misses_leavesTheTapToTheWebView() {
+        var called = false
+        val returned =
+            handlePdfTap(10f, 10f, viewport, listOf(highlight()), density) { _, _ -> called = true }
+        assertNull(returned)
+        assertFalse("a tap that hits no highlight must not open a menu", called)
+    }
+
+    @Test
+    fun handlePdfTap_withoutViewport_doesNothing() {
+        var called = false
+        assertNull(handlePdfTap(200f, -200f, null, listOf(highlight()), density) { _, _ -> called = true })
+        assertFalse(called)
     }
 
     @Test

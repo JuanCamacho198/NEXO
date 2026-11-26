@@ -43,6 +43,14 @@ sealed interface ReaderSelectionState {
     class Existing(
         val highlight: Highlight,
         val rect: Rect,
+        /**
+         * True when [rect] is in the PDF.js WebView's **viewport space** (CSS px):
+         * the space a PDF selection reports, and the one `SelectionOverlay`
+         * converts with `pdfSelectionRectInOverlayPx`. The PDF reader has no
+         * Readium navigator fragment, so the Readium origin translation must be
+         * skipped as well — the two decisions travel together.
+         */
+        val pdfViewportRect: Boolean = false,
     ) : ReaderSelectionState {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
@@ -52,7 +60,7 @@ sealed interface ReaderSelectionState {
 
         override fun hashCode(): Int = highlight.hashCode()
 
-        override fun toString(): String = "Existing(highlight=$highlight, rect=$rect)"
+        override fun toString(): String = "Existing(highlight=$highlight, rect=$rect, pdfViewportRect=$pdfViewportRect)"
     }
 }
 

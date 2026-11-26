@@ -132,7 +132,8 @@ class ReaderInteractionStateHolder(
     fun onHighlightTapped(
         highlight: Highlight,
         rect: RectF,
-    ) = selectionManager.onHighlightTapped(highlight, rect)
+        pdfViewportRect: Boolean = false,
+    ) = selectionManager.onHighlightTapped(highlight, rect, pdfViewportRect)
 
     // ── Highlights CRUD ───────────────────────────────────────────
     fun createHighlight(

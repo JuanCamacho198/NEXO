@@ -1,5 +1,6 @@
 package com.nexo.presentation.screen.pdfjs
 
+import android.graphics.RectF
 import androidx.compose.ui.geometry.Rect
 import com.nexo.domain.model.Highlight
 import com.nexo.domain.model.HighlightRect
@@ -74,6 +75,33 @@ fun pdfHighlightAt(
             x >= box.left && x < box.right && y >= box.top && y < box.bottom
         }
     }
+
+/**
+ * Routes a tap on the page to the highlight under it.
+ *
+ * Coordinates are in **Compose px inside the overlay**, which is also the WebView's
+ * own view space: both are siblings filling one Box, so they share an origin and a
+ * scale. Returns the id it opened, or null when the tap hit no painted box — in
+ * which case nothing is called and the tap stays the WebView's.
+ *
+ * The rect handed to [onHighlightTapped] is in viewport **CSS px** on purpose: that
+ * is the space a PDF.js selection reports, so the menu anchors through the same
+ * density conversion either way.
+ */
+fun handlePdfTap(
+    x: Float,
+    y: Float,
+    viewport: PdfJsMessage.Viewport?,
+    highlights: List<Highlight>,
+    density: Float,
+    onHighlightTapped: (Highlight, RectF) -> Unit,
+): String? {
+    val viewport = viewport ?: return null
+    val highlight = pdfHighlightAt(x, y, highlights, viewport, density) ?: return null
+    val bounds = pdfHighlightBoundsCss(highlight.rects.orEmpty(), viewport) ?: return null
+    onHighlightTapped(highlight, RectF(bounds.left, bounds.top, bounds.right, bounds.bottom))
+    return highlight.id
+}
 
 /**
  * The highlight's bounding box in the space a PDF.js selection reports: viewport
