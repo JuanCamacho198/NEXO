@@ -130,6 +130,19 @@ class ReaderInteractionStateHolderTest {
         }
 
     @Test
+    fun `onPdfSelection keeps the page number 1-based`() =
+        runTest {
+            holder = createHolder(scope = this)
+            val pageRects = listOf(PdfRect(0f, 0f, 10f, 10f))
+
+            holder.onPdfSelection("first page text", sampleRectF, pageNumber = 1, pageRects = pageRects)
+
+            val selection = holder.state.value.selectionState as ReaderSelectionState.New
+            // Page 1 stays 1: the anchor keeps PDF.js's 1-based numbering, never a 0-based index.
+            assertEquals(PdfSelectionAnchor(1, pageRects), selection.pdfAnchor)
+        }
+
+    @Test
     fun `onSelectionCleared drops the PDF anchor`() =
         runTest {
             holder = createHolder(scope = this)

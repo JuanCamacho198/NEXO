@@ -3,6 +3,7 @@ package com.nexo.presentation.screen.pdfjs
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Rect
+import android.graphics.RectF
 import android.net.Uri
 import android.util.Log
 import android.view.ActionMode
@@ -259,11 +260,40 @@ private fun handleMessage(
                 currentReader().lifecycleHolder.onPdfPageReported(message.page - 1, message.total)
                 "page ${message.page}/${message.total}"
             }
-            is PdfJsMessage.Selection ->
-                if (message.empty) "selection empty" else "selection page=${message.pageNumber} textLen=${message.textLength}"
+            is PdfJsMessage.Selection -> applyPdfSelection(message, currentReader)
             is PdfJsMessage.Error -> "error ${message.message}"
             null -> "unparseable len=${raw?.length ?: 0}"
         }
     Log.d(TAG, summary)
     DebugLog.info(TAG, summary)
+}
+
+/**
+ * Feeds a PDF.js selection into the interaction holder — the same entry point the Readium
+ * EPUB path uses, so the existing selection menu surface picks it up unchanged.
+ *
+ * Returns the line the caller logs; the selected prose is never part of it.
+ */
+private fun applyPdfSelection(
+    selection: PdfJsMessage.Selection,
+    currentReader: () -> ReaderViewModel,
+): String {
+    val interaction = currentReader().interactionHolder
+    if (selection.empty) {
+        interaction.onSelectionCleared()
+        return "selection empty"
+    }
+    val pageNumber = selection.pageNumber ?: return "selection dropped reason=noPage"
+    val bounds = selection.bounds ?: return "selection dropped reason=noBounds page=$pageNumber"
+    interaction.onPdfSelection(
+        text = selection.text,
+        // Viewport CSS px, raw `getBoundingClientRect()`: no density factor and no view
+        // translation is applied here. Overlay px are the overlay's job, not the parser's.
+        rect = RectF(bounds.left, bounds.top, bounds.right, bounds.bottom),
+        // 1-based, exactly as PDF.js sent it — see `PdfSelectionAnchor`.
+        pageNumber = pageNumber,
+        // Untouched page-relative scale-1 rects: the persistence format Phase 3 reads back.
+        pageRects = selection.rects,
+    )
+    return "selection page=$pageNumber textLen=${selection.textLength} rects=${selection.rects.size}"
 }

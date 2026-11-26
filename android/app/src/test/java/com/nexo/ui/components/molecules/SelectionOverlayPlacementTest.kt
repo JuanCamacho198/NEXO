@@ -202,6 +202,32 @@ class SelectionOverlayPlacementTest {
         assertEquals("left must be shifted by the horizontal gap", 300 + shift, placement.left)
         assertEquals("right must be shifted by the horizontal gap", 640 + shift, placement.right)
     }
+
+    /**
+     * The PDF.js path: the whole conversion is the CSS→device ratio, and NOTHING
+     * else. Measured on the `dev_clean` AVD (420 dpi): the posted selection sat at
+     * top 109 CSS px, `window.devicePixelRatio` was 2.625, and the WebView's Box
+     * was at window y 128. Feeding the WebView to the anchoring as a source added
+     * that 128 px a second time; these numbers pin the absence of the term.
+     */
+    @Test
+    fun `a pdf selection is scaled by the css to device ratio and never shifted`() {
+        val posted = Rect(126, 109, 149, 121)
+
+        val anchor = pdfSelectionRectInOverlayPx(posted, cssToDevicePx = 2.625f)
+
+        assertEquals("left is CSS × 2.625", 331, anchor.left)
+        assertEquals("top is CSS × 2.625, not that plus the 128px inset", 286, anchor.top)
+        assertEquals("right is CSS × 2.625", 391, anchor.right)
+        assertEquals("bottom is CSS × 2.625", 318, anchor.bottom)
+    }
+
+    @Test
+    fun `a pdf selection at density 1 is the identity`() {
+        val posted = Rect(100, 200, 300, 260)
+
+        assertEquals("nothing to convert when one CSS px is one device px", posted, pdfSelectionRectInOverlayPx(posted, 1f))
+    }
 }
 
 /**

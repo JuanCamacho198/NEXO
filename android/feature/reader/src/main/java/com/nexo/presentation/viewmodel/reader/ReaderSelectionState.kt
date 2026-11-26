@@ -73,6 +73,14 @@ data class PdfRect(
     val height: Float,
 )
 
+/**
+ * Where a PDF selection lives, in the format Phase 3 persists.
+ *
+ * [pageNumber] is **1-based** — the numbering PDF.js reports from `data-page-number` and the
+ * one the Readium PDF locator path already yields. `SelectionManager` passes the caller's
+ * value through untouched, so callers must hand over a 1-based page. A 0-based index exists
+ * only inside the PDF.js bridge dispatch and never reaches this model.
+ */
 data class PdfSelectionAnchor(
     val pageNumber: Int,
     val rects: List<PdfRect>,

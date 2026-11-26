@@ -102,10 +102,18 @@ fun rememberReaderSelectionCallbacks(
                 // `annotationUiState` parameter is frozen to the composition
                 // that created this lambda, so a selection arriving later left
                 // it null and the clipboard got nothing.
+                //
+                // Read it BEFORE handing over to the holder: onCopySelectedText
+                // dismisses the menu, and dismissing nulls `selectedText`. Read
+                // after, the clipboard was always handed a null and stayed
+                // empty while the snackbar still promised "Copied to clipboard"
+                // (verified on the dev_clean AVD: the field's own Copy made
+                // Paste appear, the reader's Copy did not).
+                val text = viewModel.annotationUiState.value.selectedText
                 viewModel.interactionHolder.onCopySelectedText()
-                viewModel.annotationUiState.value.selectedText?.let { text ->
+                text?.let {
                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                    clipboard.setPrimaryClip(ClipData.newPlainText("highlight", text))
+                    clipboard.setPrimaryClip(ClipData.newPlainText("highlight", it))
                 }
                 Unit
             }

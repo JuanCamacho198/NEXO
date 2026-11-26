@@ -119,12 +119,18 @@ fun ReaderScreenContentHost(
             sessionUiState.bookFormat == "pdf" &&
             readiumPublication != null &&
             !sessionUiState.bookFilePath.isNullOrBlank() -> {
-            PdfJsReaderContent(
-                bookPath = sessionUiState.bookFilePath.orEmpty(),
-                viewModel = viewModel,
-                onShowChrome = { currentOnShowChrome() },
-                modifier = modifier.fillMaxSize(),
-            )
+            // The overlay is a sibling of the reader content, not a child: both
+            // fill this one Box, so the PDF.js viewport and the overlay share
+            // their origin and no view translation is needed (see SelectionOverlay).
+            Box(modifier = modifier.fillMaxSize()) {
+                PdfJsReaderContent(
+                    bookPath = sessionUiState.bookFilePath.orEmpty(),
+                    viewModel = viewModel,
+                    onShowChrome = { currentOnShowChrome() },
+                    modifier = Modifier.fillMaxSize(),
+                )
+                SharedSelectionOverlay()
+            }
         }
         sessionUiState.bookFormat == "pdf" && readiumPublication != null -> {
             Box(modifier = modifier.fillMaxSize()) {
