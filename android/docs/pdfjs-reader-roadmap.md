@@ -1,6 +1,6 @@
 # Roadmap — Lector PDF con PDF.js (Android)
 
-Rama: `feat/android-pdfjs-reader`. Estado: Fase 0 cerrada (2026-11-25) para PDFs de texto. Fase 1 en curso.
+Rama: `feat/android-pdfjs-reader`. Estado: Fase 0 y Fase 1 cerradas (2026-11-25) para PDFs de texto. Fase 2 en curso.
 
 ## Por qué
 
@@ -98,11 +98,24 @@ La app apunta primero a libros normales. Medido en el celular con un PDF escanea
 - Sin temas en Fase 1: el visor actual no aplica `readerSettings` a PDF.
 - Riesgo: desktop no restaura progreso de PDF hoy (inferido); la sync de progreso PDF Android↔desktop queda fuera de Fase 1.
 
+## Resultados Fase 1
+
+- Slice 1: el visor informa el total de páginas (`onPdfDocumentLoaded`), así el indicador y los límites de navegación por fin conocen el total en PDF; taps de chrome en bordes como el visor viejo.
+- Slice 2: progreso guardado al cambiar de página: `pdfpage:N` (0-based) + `locatorJson` con `position` N+1 y `totalProgression` (inicio de página; `percentage` usa el final de página, convención previa). Verificado en emulador (fila `pdfpage:4`, 62,5 %, position 5).
+- Slice 3: reanuda en la página guardada (el loader lee `pdfpage:N` antes de crear el visor; el visor salta y solo después informa, así abrir no sobrescribe la posición). Saltos desde la barra de progreso, zonas de tap y marcadores llegan al visor por un flujo de índice de página. Verificado en emulador.
+- Slice 4: rotación ya funciona sin cambios: la Activity se recrea, el WebView recarga el PDF y abre en la página guardada, ajustado al ancho. Abre al inicio de la página, no en el desplazamiento exacto (inferido). Recargar el PDF en cada rotación puede ser lento en PDFs grandes (no medido).
+
+## Hallazgos fuera de alcance (no corregidos)
+
+- El diálogo "Ir a página" no se puede abrir: nada en `app/src/main` pone `showGoToPageDialog` a true (afecta a toda la app, no solo PDF).
+- El visor PDF viejo (Readium, el de release) ya no recibe saltos de página: ahora van por el flujo de índice que solo escucha PDF.js. Antes solo funcionaban para la página 1 (`readingOrder.getOrNull(pageIndex)` en un PDF de un solo enlace), así que la pérdida es mínima y desaparece cuando PDF.js reemplace al viejo.
+- Desktop no restaura el progreso de PDF (inferido); la sync de posición PDF Android↔desktop sigue pendiente.
+
 ## Riesgos (top 5)
 
 1. **Selección inestable en WebView Android.** Bug conocido [mozilla/pdf.js#17912](https://github.com/mozilla/pdf.js/issues/17912): salto al inicio de página si el dedo queda entre líneas. Mitigación parcial en el commit `92b5cf6` (`.endOfContent`). Riesgo central.
-2. **Worker/ESM** (`.mjs` MIME, CORS) bajo `WebViewAssetLoader`. Sin verificar.
-3. **Versión mínima de WebView.** Build moderno vs legacy (legacy pide Chrome 125+ según la FAQ de pdf.js; moderno, una más reciente). Android 8-10 sin Play Store pueden tener WebView viejo.
+2. **Worker/ESM** bajo WebViewAssetLoader — resuelto: funciona sirviendo `.mjs` como `text/javascript`.
+3. **Versión mínima de WebView** — resuelto con el build legacy + polyfills (ver Resultados Fase 0).
 4. **Memoria y límite de canvas** con PDFs grandes y zoom.
 5. **Mapeo selección a coordenadas** correcto con rotación de página y zoom.
 
