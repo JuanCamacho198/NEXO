@@ -101,6 +101,13 @@ class ReaderInteractionStateHolder(
         existingHighlights: List<Highlight>,
     ) = selectionManager.onReadiumSelection(locator, rect, text, existingHighlights)
 
+    fun onPdfSelection(
+        text: String,
+        rect: RectF,
+        pageNumber: Int,
+        pageRects: List<PdfRect>,
+    ) = selectionManager.onPdfSelection(text, rect, pageNumber, pageRects)
+
     fun onSelectionCleared() = selectionManager.onSelectionCleared()
 
     fun onSelectionCleared(

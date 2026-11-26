@@ -107,6 +107,51 @@ class ReaderInteractionStateHolderTest {
         }
 
     @Test
+    fun `onPdfSelection sets New state with null locator, normalized text and anchor`() =
+        runTest {
+            holder = createHolder(scope = this)
+            val pageRects = listOf(PdfRect(10f, 20f, 30f, 12f))
+
+            holder.onPdfSelection(
+                text = "  hello \n  pdf   world ",
+                rect = sampleRectF,
+                pageNumber = 3,
+                pageRects = pageRects,
+            )
+
+            val state = holder.state.value
+            val selection = state.selectionState as ReaderSelectionState.New
+            assertNull(selection.locator)
+            assertEquals("hello pdf world", selection.text)
+            assertEquals(PdfSelectionAnchor(3, pageRects), selection.pdfAnchor)
+            assertEquals("hello pdf world", state.selectedText)
+            assertEquals(Rect(100, 200, 400, 280).left, state.selectionRect?.left)
+            assertEquals(Rect(100, 200, 400, 280).bottom, state.selectionRect?.bottom)
+        }
+
+    @Test
+    fun `onSelectionCleared drops the PDF anchor`() =
+        runTest {
+            holder = createHolder(scope = this)
+            holder.onPdfSelection("text", sampleRectF, 1, listOf(PdfRect(0f, 0f, 1f, 1f)))
+
+            holder.onSelectionCleared(null, 0L)
+
+            assertEquals(ReaderSelectionState.None, holder.state.value.selectionState)
+            assertNull(holder.state.value.selectedText)
+        }
+
+    @Test
+    fun `onReadiumSelection leaves the PDF anchor null`() =
+        runTest {
+            holder = createHolder(scope = this)
+
+            holder.onReadiumSelection(mockk<Locator>(relaxed = true), sampleRectF, "epub text", emptyList())
+
+            assertNull((holder.state.value.selectionState as ReaderSelectionState.New).pdfAnchor)
+        }
+
+    @Test
     fun `onHighlightTapped sets Existing selection state`() =
         runTest {
             holder = createHolder(scope = this)

@@ -14,6 +14,7 @@ import com.nexo.presentation.viewmodel.reader.lifecycle.PdfBookLoader
 import com.nexo.presentation.viewmodel.reader.lifecycle.ReadingNavigator
 import com.nexo.presentation.viewmodel.reader.lifecycle.ReadingProgressTracker
 import com.nexo.presentation.viewmodel.reader.lifecycle.ReadingSessionRecorder
+import com.nexo.presentation.viewmodel.reader.lifecycle.pdfStartPageIndex
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -48,6 +49,7 @@ class ReaderLifecycleStateHolder(
     private val onErrorEvent: (UiEvent) -> Unit,
     private val onSelectionCleared: () -> Unit = {},
     private val onNavigateToLocator: (Locator) -> Unit = {},
+    private val onNavigateToPdfPage: (Int) -> Unit = {},
     private val onBookLoaded: (bookId: String) -> Unit = {},
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
     private val supabaseProgressSync: SupabaseProgressSync? = null,
@@ -110,6 +112,9 @@ class ReaderLifecycleStateHolder(
             onErrorEvent = onErrorEvent,
             onBookLoaded = onBookLoaded,
             onProgressDisplay = { progressTracker.updateProgressDisplay() },
+            savedPdfPage = { id ->
+                pdfStartPageIndex(readerRepository.getProgressForBook(id, activeUser.requireUserId())?.cfiLocation)
+            },
         )
 
     private val navigator =
@@ -122,6 +127,7 @@ class ReaderLifecycleStateHolder(
             updateReadingProgressUseCase = updateReadingProgressUseCase,
             onChapterChanged = onChapterChanged,
             onNavigateToLocator = onNavigateToLocator,
+            onNavigateToPdfPage = onNavigateToPdfPage,
             onSelectionCleared = onSelectionCleared,
             onProgressDisplay = { progressTracker.updateProgressDisplay() },
             onReaderMoved = { progressTracker.onReaderMoved() },
@@ -476,6 +482,11 @@ class ReaderLifecycleStateHolder(
 
     @Deprecated("Delegate to ReadingNavigator — to be removed in PR #2")
     fun goToChapter(listPosition: Int) = navigator.goToChapter(listPosition)
+
+    fun onPdfPageReported(
+        pageIndex: Int,
+        totalPages: Int,
+    ) = progressTracker.onPdfPageReported(pageIndex, totalPages)
 
     @Deprecated("Delegate to ReadingNavigator — to be removed in PR #2")
     fun goToNextPdfPage() = navigator.goToNextPdfPage()

@@ -28,6 +28,7 @@ internal class ReadingNavigator(
     private val updateReadingProgressUseCase: UpdateReadingProgressUseCase? = null,
     private val onChapterChanged: () -> Unit = {},
     private val onNavigateToLocator: (Locator) -> Unit = {},
+    private val onNavigateToPdfPage: (Int) -> Unit = {},
     private val onSelectionCleared: () -> Unit = {},
     private val onProgressDisplay: () -> Unit = {},
     /**
@@ -142,6 +143,7 @@ internal class ReadingNavigator(
             state.update { it.copy(currentPdfPage = pageIndex) }
             updatePdfProgress(pageIndex, totalPages)
             onProgressDisplay()
+            emitPdfNavigateLocator(pageIndex)
         }
     }
 
@@ -153,6 +155,7 @@ internal class ReadingNavigator(
             state.update { it.copy(currentPdfPage = newPage) }
             updatePdfProgress(newPage, totalPages)
             onProgressDisplay()
+            emitPdfNavigateLocator(newPage)
         }
     }
 
@@ -171,8 +174,7 @@ internal class ReadingNavigator(
         val publication = currentState.readiumPublication ?: return
         when (currentState.bookFormat) {
             "pdf" -> {
-                val link = publication.readingOrder.getOrNull(currentState.currentPdfPage) ?: return
-                emitPdfNavigateLocator(currentState.currentPdfPage, link)
+                emitPdfNavigateLocator(currentState.currentPdfPage)
             }
             else -> {
                 val chapters = currentState.chapters
@@ -206,20 +208,8 @@ internal class ReadingNavigator(
         }
     }
 
-    private fun emitPdfNavigateLocator(
-        pageIndex: Int,
-        link: Link? = null,
-    ) {
-        val publication = state.value.readiumPublication ?: return
-        val resolvedLink = link ?: publication.readingOrder.getOrNull(pageIndex) ?: return
-        val json =
-            JSONObject().apply {
-                put("href", resolvedLink.href.toString())
-                put("mediaType", resolvedLink.mediaType?.toString() ?: "application/pdf")
-                put("locations", JSONObject().apply { put("position", pageIndex + 1) })
-            }
-        val locator = Locator.fromJSON(json) ?: return
-        scope.launch(mainDispatcher) { onNavigateToLocator(locator) }
+    private fun emitPdfNavigateLocator(pageIndex: Int) {
+        scope.launch(mainDispatcher) { onNavigateToPdfPage(pageIndex) }
     }
 
     private fun emitEpubNavigateLocator(

@@ -160,6 +160,9 @@ class ReaderViewModel(
      */
     val navigateToLocator: SharedFlow<Locator> = _navigateToLocator.asSharedFlow()
 
+    private val _navigateToPdfPage = MutableSharedFlow<Int>()
+    val navigateToPdfPage: SharedFlow<Int> = _navigateToPdfPage.asSharedFlow()
+
     // ── Cluster C state holders (extracted responsibilities) ──────────
 
     /**
@@ -216,6 +219,7 @@ class ReaderViewModel(
             onChapterChanged = { sleepTimerManager.onChapterChanged() },
             onErrorEvent = { _uiEvent.tryEmit(it) },
             onSelectionCleared = { interactionHolder.onSelectionClearedFromLifecycle() },
+            onNavigateToPdfPage = { page -> viewModelScope.launch { _navigateToPdfPage.emit(page) } },
             onNavigateToLocator = { loc -> viewModelScope.launch { _navigateToLocator.emit(loc) } },
             onBookLoaded = { bookId -> interactionHolder.observeBook(bookId) },
             mainDispatcher = mainDispatcher,
