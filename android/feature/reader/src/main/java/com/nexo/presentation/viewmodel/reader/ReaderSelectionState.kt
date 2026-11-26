@@ -27,16 +27,17 @@ sealed interface ReaderSelectionState {
         val rect: Rect,
         val text: String,
         val locator: Locator?,
+        val pdfAnchor: PdfSelectionAnchor? = null,
     ) : ReaderSelectionState {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (other !is New) return false
-            return text == other.text && locator == other.locator
+            return text == other.text && locator == other.locator && pdfAnchor == other.pdfAnchor
         }
 
-        override fun hashCode(): Int = 31 * text.hashCode() + (locator?.hashCode() ?: 0)
+        override fun hashCode(): Int = 31 * (31 * text.hashCode() + (locator?.hashCode() ?: 0)) + (pdfAnchor?.hashCode() ?: 0)
 
-        override fun toString(): String = "New(rect=$rect, text='$text', locator=$locator)"
+        override fun toString(): String = "New(rect=$rect, text='$text', locator=$locator, pdfAnchor=$pdfAnchor)"
     }
 
     class Existing(
@@ -63,3 +64,16 @@ internal fun RectF.toRect(): Rect =
         right.toInt(),
         bottom.toInt(),
     )
+
+/** Page-relative, scale-1 CSS px, top-left origin. Lives here until Phase 3 highlights need it in domain. */
+data class PdfRect(
+    val x: Float,
+    val y: Float,
+    val width: Float,
+    val height: Float,
+)
+
+data class PdfSelectionAnchor(
+    val pageNumber: Int,
+    val rects: List<PdfRect>,
+)

@@ -9,6 +9,8 @@ import com.nexo.domain.model.Highlight
 import com.nexo.domain.model.HighlightColor
 import com.nexo.presentation.viewmodel.reader.HIGHLIGHT_TAP_DEBOUNCE_MS
 import com.nexo.presentation.viewmodel.reader.MENU_CLOSE_IGNORE_MS
+import com.nexo.presentation.viewmodel.reader.PdfRect
+import com.nexo.presentation.viewmodel.reader.PdfSelectionAnchor
 import com.nexo.presentation.viewmodel.reader.ReaderSelectionState
 import com.nexo.presentation.viewmodel.reader.SelectionCoordinator
 import com.nexo.presentation.viewmodel.reader.lifecycle.Clearable
@@ -114,6 +116,29 @@ internal class SelectionManager(
         rect: RectF,
         text: String,
         existingHighlights: List<Highlight>,
+    ) = applySelection(text, rect, locator, null, "VM.onReadiumSelection", "locator.href=${locator.href}")
+
+    fun onPdfSelection(
+        text: String,
+        rect: RectF,
+        pageNumber: Int,
+        pageRects: List<PdfRect>,
+    ) = applySelection(
+        text,
+        rect,
+        null,
+        PdfSelectionAnchor(pageNumber, pageRects),
+        "VM.onPdfSelection",
+        "page=$pageNumber rects=${pageRects.size}",
+    )
+
+    private fun applySelection(
+        text: String,
+        rect: RectF,
+        locator: Locator?,
+        pdfAnchor: PdfSelectionAnchor?,
+        label: String,
+        origin: String,
     ) {
         // Log the SHAPE of the selection, never its prose: every log line reaches
         // Sentry through the FeedbackCapture snapshot, so book content must not
@@ -126,8 +151,8 @@ internal class SelectionManager(
         val selectionShape = text.codepointShape()
         Log.d(
             "SelectionDebug",
-            "VM.onReadiumSelection: len=${text.length} shape=$selectionShape, " +
-                "rect=[${rect.left},${rect.top},${rect.right},${rect.bottom}], locator.href=${locator.href}",
+            "$label: len=${text.length} shape=$selectionShape, " +
+                "rect=[${rect.left},${rect.top},${rect.right},${rect.bottom}], $origin",
         )
         val now = SystemClock.elapsedRealtime()
         when (val current = coordinator) {
@@ -176,7 +201,13 @@ internal class SelectionManager(
             coordinator = SelectionCoordinator.NewSelection(normalizedText, selectionRect, locator)
             store.update {
                 it.copy(
-                    selectionState = ReaderSelectionState.New(rect = selectionRect, text = normalizedText, locator = locator),
+                    selectionState =
+                        ReaderSelectionState.New(
+                            rect = selectionRect,
+                            text = normalizedText,
+                            locator = locator,
+                            pdfAnchor = pdfAnchor,
+                        ),
                     selectedText = normalizedText,
                     selectionRect = selectionRect,
                 )
