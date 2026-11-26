@@ -16,6 +16,7 @@ import com.nexo.data.remote.sync.CommitOutcome
 import com.nexo.data.remote.sync.OutboxCommit
 import com.nexo.data.session.SessionManager
 import com.nexo.data.sync.CanonicalLocator
+import com.nexo.data.sync.HighlightRectCodec
 import com.nexo.data.sync.LocatorCodec
 import com.nexo.data.sync.LocatorLocations
 import com.nexo.debug.DebugLog
@@ -504,8 +505,9 @@ class SupabaseProgressSync(
                             textContent = localHighlight.textContent,
                             note = localHighlight.note,
                             color = localHighlight.color,
-                            page = null,
+                            page = localHighlight.page,
                             type = localHighlight.type,
+                            rectJson = HighlightRectCodec.storedToJson(localHighlight.rectJson),
                             locatorJson = resolvedLocatorJson,
                             deletedAt =
                                 localHighlight.deletedAtEpochMillis?.let {
@@ -780,6 +782,8 @@ class SupabaseProgressSync(
                         locatorJson = LocatorCodec.normalizeLocatorJson(row.locatorJson) ?: row.locatorJson,
                         type = row.type,
                         userId = row.userId,
+                        page = row.page,
+                        rectJson = HighlightRectCodec.jsonToStored(row.rectJson),
                     ),
                 )
             }

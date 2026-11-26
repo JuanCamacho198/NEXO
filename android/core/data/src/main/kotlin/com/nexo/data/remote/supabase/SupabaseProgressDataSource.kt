@@ -12,6 +12,7 @@ import io.github.jan.supabase.realtime.realtime
 import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonObject
 
 /**
  * Reading progress CRUD via Supabase PostgREST (using supabase-kt postgrest-kt).
@@ -488,8 +489,13 @@ data class HighlightRow(
     val color: String = "yellow",
     val page: Int? = null,
     val type: String? = null,
+    /**
+     * Approved `{"v":1,"rects":[…]}` object — page-relative CSS px at scale 1. Null for EPUB,
+     * for legacy PDF rows and for anything else without geometry. A `JsonObject` rather than a
+     * typed DTO so an unknown future shape still decodes instead of failing the whole row.
+     */
     @SerialName("rect_json")
-    val rectJson: Map<String, Double>? = null,
+    val rectJson: JsonObject? = null,
     @SerialName("locator_json")
     val locatorJson: String? = null,
     @SerialName("deleted_at")

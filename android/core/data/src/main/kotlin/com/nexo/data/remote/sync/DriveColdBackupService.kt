@@ -181,6 +181,7 @@ class DriveColdBackupService(
                         textContent = e.textContent,
                         note = e.note,
                         color = e.color,
+                        page = e.page,
                         type = e.type,
                         locatorJson = e.locatorJson,
                         deletedAt = e.deletedAtEpochMillis?.let { millisToIso(it) },
