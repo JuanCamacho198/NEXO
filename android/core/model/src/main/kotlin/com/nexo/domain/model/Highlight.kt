@@ -74,6 +74,11 @@ enum class HighlightColor(
  * A highlight or annotation within a book.
  *
  * @property tag Optional user-defined tag for categorising highlights.
+ * @property page Page the highlight starts on. **1-based**, PDF only — null for EPUB and for
+ *   PDF rows written before geometry existed. `cfiRange` keeps `pdfpage:N` 0-based for the
+ *   legacy restore path; the two conventions coexist on purpose.
+ * @property rects PDF geometry in page-relative CSS px at scale 1 (see [HighlightRect]).
+ *   Null for EPUB and for legacy rows without geometry.
  */
 @Immutable
 data class Highlight(
@@ -88,4 +93,6 @@ data class Highlight(
     val tag: String? = null,
     val locatorJson: String? = null,
     val type: String? = null,
+    val page: Int? = null,
+    val rects: List<HighlightRect>? = null,
 )

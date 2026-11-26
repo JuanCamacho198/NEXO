@@ -804,4 +804,58 @@ class AppDatabaseMigrationTest {
         }
         db.close()
     }
+
+    @Test
+    fun `migration 37 to 38 adds page and rect_json to highlights`() {
+        val dbPath =
+            InstrumentationRegistry
+                .getInstrumentation()
+                .targetContext
+                .getDatabasePath("migration-37-38")
+                .absolutePath
+        helper.createDatabase(dbPath, 37).use { db ->
+            db.execSQL(
+                "INSERT INTO books (id, title, file_path, format, updated_at, reading_state, " +
+                    "state_version, remote_lifecycle, remote_catalog_version, user_id) " +
+                    "VALUES ('bk-38', 'Book', '/b.epub', 'epub', 1000, 'reading', 0, 'imported', 0, 'user-a')",
+            )
+            // An EPUB highlight as v37 could hold it: no geometry anywhere.
+            db.execSQL(
+                "INSERT INTO highlights (id, book_id, cfi_range, text_content, note, color, updated_at, " +
+                    "deleted_at, locator_json, type, tag, user_id) " +
+                    "VALUES ('hl-38', 'bk-38', 'epubcfi(/6/4!/4/2,/1:10,/1:30)', 'text', NULL, '#FACC15', " +
+                    "1000, NULL, NULL, NULL, NULL, 'user-a')",
+            )
+        }
+
+        val db = helper.runMigrationsAndValidate(dbPath, 38, true, AppDatabaseMigrations.MIGRATION_37_38)
+
+        val columns = columnNames(db, "highlights")
+        assertTrue("highlights must gain page, got $columns", columns.contains("page"))
+        assertTrue("highlights must gain rect_json, got $columns", columns.contains("rect_json"))
+        assertEquals("the migration is additive — nothing dropped", 14, columns.size)
+
+        // The pre-existing row survives and reads as "no geometry".
+        db.query("SELECT text_content, page, rect_json FROM highlights WHERE id = 'hl-38'").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals("text", cursor.getString(0))
+            assertTrue("page must be NULL for an EPUB row", cursor.isNull(1))
+            assertTrue("rect_json must be NULL for an EPUB row", cursor.isNull(2))
+        }
+
+        // The new columns take geometry without disturbing the rest of the row.
+        db.execSQL(
+            """UPDATE highlights SET page = 3, rect_json = '{"v":1,"rects":[{"left":1,"top":2,"width":3,"height":4}]}' WHERE id = 'hl-38'""",
+        )
+        db.query("SELECT cfi_range, page, rect_json FROM highlights WHERE id = 'hl-38'").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals("epubcfi(/6/4!/4/2,/1:10,/1:30)", cursor.getString(0))
+            assertEquals(3L, cursor.getLong(1))
+            assertEquals(
+                """{"v":1,"rects":[{"left":1,"top":2,"width":3,"height":4}]}""",
+                cursor.getString(2),
+            )
+        }
+        db.close()
+    }
 }

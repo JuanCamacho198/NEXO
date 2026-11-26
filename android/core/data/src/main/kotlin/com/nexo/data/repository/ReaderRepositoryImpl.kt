@@ -11,6 +11,7 @@ import com.nexo.data.local.entity.ReadingProgressEntity
 import com.nexo.data.local.entity.SyncEntityType
 import com.nexo.data.local.entity.SyncOperation
 import com.nexo.data.local.entity.SyncOutboxEntity
+import com.nexo.data.sync.HighlightRectCodec
 import com.nexo.data.sync.LocatorCodec
 import com.nexo.domain.model.Bookmark
 import com.nexo.domain.model.Highlight
@@ -186,6 +187,10 @@ class ReaderRepositoryImpl(
         }
         if (highlight.type != null) obj.put("type", highlight.type) else obj.put("type", org.json.JSONObject.NULL)
         if (highlight.tag != null) obj.put("tag", highlight.tag) else obj.put("tag", org.json.JSONObject.NULL)
+        if (highlight.page != null) obj.put("page", highlight.page) else obj.put("page", org.json.JSONObject.NULL)
+        // Serialised (a string) for the same reason locatorJson is: room for a future shape.
+        val rectJson = HighlightRectCodec.encode(highlight.rects)
+        if (rectJson != null) obj.put("rectJson", rectJson) else obj.put("rectJson", org.json.JSONObject.NULL)
         return obj.toString()
     }
 
@@ -300,6 +305,8 @@ class ReaderRepositoryImpl(
             locatorJson = normalizedJson,
             type = type,
             tag = tag,
+            page = page,
+            rects = HighlightRectCodec.decode(rectJson),
         )
     }
 
@@ -317,6 +324,8 @@ class ReaderRepositoryImpl(
             type = type,
             tag = tag,
             userId = userId,
+            page = page,
+            rectJson = HighlightRectCodec.encode(rects),
         )
 
     private fun BookmarkEntity.toDomain(): Bookmark {
