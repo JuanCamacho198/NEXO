@@ -481,8 +481,83 @@ class ReaderInteractionStateHolderTest {
             assertEquals("epub text", captured.textContent)
         }
 
-    // ── Tag Input ─────────────────────────────────────────────────
+    @Test
+    fun `annotating a PDF selection keeps the anchor page, rects and a 0-based pdfpage cfi`() =
+        runTest {
+            holder = createHolder(scope = this)
+            holder.onPdfSelection(
+                text = "noted in a pdf",
+                rect = sampleRectF,
+                pageNumber = 4,
+                pageRects = listOf(PdfRect(10f, 20f, 30f, 12f), PdfRect(10f, 34f, 18f, 12f)),
+                pageSize = PdfPageSize(width = 595f, height = 842f),
+            )
 
+            holder.onAnnotate(
+                selectedBookId = "book-1",
+                bookFormat = "pdf",
+                currentChapterIndex = 0,
+                currentPdfPage = 3,
+                chapters = emptyList(),
+            )
+            advanceUntilIdle()
+
+            val slot = slot<Highlight>()
+            coVerify { readerRepository.upsertHighlight(capture(slot), any()) }
+            val captured = slot.captured
+            // Without the geometry the note row could never paint.
+            assertEquals("page stays 1-based", 4, captured.page)
+            assertEquals("pdfpage:3", captured.cfiRange)
+            assertNull("a PDF selection has no Readium locator", captured.locatorJson)
+            assertEquals(
+                listOf(
+                    HighlightRect(left = 10f, top = 20f, width = 30f, height = 12f),
+                    HighlightRect(left = 10f, top = 34f, width = 18f, height = 12f),
+                ),
+                captured.rects,
+            )
+            assertEquals("noted in a pdf", captured.textContent)
+            assertEquals(HighlightColor.YELLOW.hex, captured.color)
+            // The note modal still opens over the promoted Existing highlight.
+            assertTrue("note modal should be open", holder.state.value.showNoteModal)
+            assertTrue(
+                "the new highlight becomes the active one",
+                holder.state.value.selectionState is ReaderSelectionState.Existing,
+            )
+        }
+
+    @Test
+    fun `annotating an EPUB selection still writes the readium row without geometry`() =
+        runTest {
+            holder = createHolder(scope = this)
+            val locator = mockk<Locator>(relaxed = true)
+            holder.onReadiumSelection(
+                locator = locator,
+                rect = sampleRectF,
+                text = "epub note",
+                existingHighlights = emptyList(),
+            )
+
+            holder.onAnnotate(
+                selectedBookId = "book-1",
+                bookFormat = "epub",
+                currentChapterIndex = 0,
+                currentPdfPage = 0,
+                chapters = emptyList(),
+            )
+            advanceUntilIdle()
+
+            val slot = slot<Highlight>()
+            coVerify { readerRepository.upsertHighlight(capture(slot), any()) }
+            val captured = slot.captured
+            assertEquals("readium:${locator.href}", captured.cfiRange)
+            assertNull("EPUB keeps no page", captured.page)
+            assertNull("EPUB keeps no rects", captured.rects)
+            assertTrue("EPUB keeps its locator", captured.locatorJson != null)
+            assertEquals("epub note", captured.textContent)
+        }
+
+    // ── Tag Input ─────────────────────────────────────────────────
     @Test
     fun `onSaveTag persists via repository`() =
         runTest {

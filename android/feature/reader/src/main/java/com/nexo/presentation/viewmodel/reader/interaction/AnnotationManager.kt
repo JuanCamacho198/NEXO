@@ -77,28 +77,34 @@ internal class AnnotationManager(
             is ReaderSelectionState.New -> {
                 val bookId = selectedBookId ?: return
                 val text = selection.text
-                val locatorJson = selection.locator?.let { CfiMigrator.locatorToJson(it) }
-                val cfiRange =
-                    if (bookFormat ==
-                        "pdf"
-                    ) {
-                        "pdfpage:$currentPdfPage"
-                    } else {
-                        "readium:${selection.locator?.href ?: "epubcfi(/6/${currentChapterIndex + 1})"}"
-                    }
-                val newId = UUID.randomUUID().toString()
+                // A PDF selection is assembled by the same helper the colour path uses;
+                // building it here by hand is how a noted row lost its page and rects.
+                val pdfAnchor = selection.pdfAnchor
                 val highlight =
-                    Highlight(
-                        id = newId,
-                        bookId = bookId,
-                        cfiRange = cfiRange,
-                        textContent = text,
-                        note = null,
-                        color = HighlightColor.YELLOW.hex,
-                        updatedAtEpochMillis = System.currentTimeMillis(),
-                        deletedAtEpochMillis = null,
-                        locatorJson = locatorJson,
-                    )
+                    if (pdfAnchor != null) {
+                        pdfHighlight(bookId = bookId, anchor = pdfAnchor, text = text)
+                    } else {
+                        val locatorJson = selection.locator?.let { CfiMigrator.locatorToJson(it) }
+                        val cfiRange =
+                            if (bookFormat ==
+                                "pdf"
+                            ) {
+                                "pdfpage:$currentPdfPage"
+                            } else {
+                                "readium:${selection.locator?.href ?: "epubcfi(/6/${currentChapterIndex + 1})"}"
+                            }
+                        Highlight(
+                            id = UUID.randomUUID().toString(),
+                            bookId = bookId,
+                            cfiRange = cfiRange,
+                            textContent = text,
+                            note = null,
+                            color = HighlightColor.YELLOW.hex,
+                            updatedAtEpochMillis = System.currentTimeMillis(),
+                            deletedAtEpochMillis = null,
+                            locatorJson = locatorJson,
+                        )
+                    }
                 scope.launch(mainDispatcher) { readerRepository.upsertHighlight(highlight, activeUser.requireUserId()) }
                 selectionManager.coordinator =
                     SelectionCoordinator.ExistingHighlight(

@@ -11,7 +11,6 @@ import com.nexo.presentation.viewmodel.CfiMigrator
 import com.nexo.presentation.viewmodel.reader.PdfSelectionAnchor
 import com.nexo.presentation.viewmodel.reader.ReaderSelectionState
 import com.nexo.presentation.viewmodel.reader.lifecycle.Clearable
-import com.nexo.presentation.viewmodel.reader.withinStartPage
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -137,33 +136,16 @@ internal class HighlightManager(
         selectionManager.dismissMenuAndClearSelection()
     }
 
-    /**
-     * Persists a highlight for a PDF selection.
-     *
-     * `page` is the anchor's 1-based page, while `cfiRange` keeps the 0-based
-     * `pdfpage:<n>` every existing row and the reader's restore path already use.
-     * `locatorJson` stays null: a PDF selection has no Readium locator.
-     *
-     * v1 scope is one page per highlight, so only the rects that still fall inside the
-     * start page's box are kept — PDF.js reports the rest relative to that same origin.
-     */
+    /** Persists a highlight for a PDF selection; the assembly lives in [pdfHighlight]. */
     private fun createPdfHighlight(
         bookId: String,
         anchor: PdfSelectionAnchor,
         text: String,
         color: String,
     ) {
-        createHighlight(
-            bookId = bookId,
-            cfiRange = "pdfpage:${anchor.pageNumber - 1}",
-            textContent = text,
-            color = color,
-            page = anchor.pageNumber,
-            rects =
-                anchor.rects.withinStartPage(anchor.pageSize).map {
-                    HighlightRect(left = it.x, top = it.y, width = it.width, height = it.height)
-                },
-        )
+        val highlight = pdfHighlight(bookId = bookId, anchor = anchor, text = text, color = color)
+        scope.launch(mainDispatcher) { readerRepository.upsertHighlight(highlight, activeUser.requireUserId()) }
+        Log.d(TAG, "Highlight created: ${highlight.id}")
     }
 
     fun onReadiumDeleteHighlight(highlightId: String) {
