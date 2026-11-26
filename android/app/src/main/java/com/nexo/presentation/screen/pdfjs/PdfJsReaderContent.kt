@@ -21,6 +21,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -28,6 +30,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.webkit.WebMessageCompat
 import androidx.webkit.WebViewAssetLoader
@@ -155,6 +158,10 @@ fun PdfJsReaderContent(
     val currentViewModel by rememberUpdatedState(viewModel)
     val startPage = remember { viewModel.sessionUiState.value.currentPdfPage + 1 }
     var webView by remember { mutableStateOf<WebView?>(null) }
+    // The page's offset and scale inside the WebView, as the last `viewport`
+    // message reported them. A plain snapshot of bridge traffic, so it lives in
+    // composition state next to `webView` rather than in the ViewModel.
+    val viewportState = remember { mutableStateOf<PdfJsMessage.Viewport?>(null) }
     LaunchedEffect(webView) {
         val target = webView ?: return@LaunchedEffect
         viewModel.navigateToLocator.collect { locator ->
@@ -236,7 +243,11 @@ fun PdfJsReaderContent(
                             "nexoPdf",
                             setOf(ORIGIN),
                         ) { _, message: WebMessageCompat, _, _, _ ->
-                            handleMessage(message.data) { currentViewModel }
+                            handleMessage(
+                                raw = message.data,
+                                currentReader = { currentViewModel },
+                                onViewport = { viewportState.value = it },
+                            )
                         }
                     } else {
                         DebugLog.error(TAG, "WEB_MESSAGE_LISTENER not supported")
@@ -248,8 +259,14 @@ fun PdfJsReaderContent(
             },
             onRelease = {
                 webView = null
+                viewportState.value = null
                 it.destroy()
             },
+        )
+        PdfHighlightLayer(
+            viewportState = viewportState,
+            viewModel = currentViewModel,
+            density = LocalDensity.current.density,
         )
         if (onShowChrome != null) {
             ChromeEdgeTapZones(onShowChrome = { onShowChrome() })
@@ -257,9 +274,31 @@ fun PdfJsReaderContent(
     }
 }
 
+/**
+ * The highlight paint layer, isolated behind its own composition scope.
+ *
+ * Both reads that change while the reader scrolls — the viewport snapshot and the
+ * annotation slice — happen here, so a `viewport` message every 100 ms or a
+ * selection opening does not recompose [PdfJsReaderContent]'s `AndroidView`.
+ */
+@Composable
+private fun PdfHighlightLayer(
+    viewportState: MutableState<PdfJsMessage.Viewport?>,
+    viewModel: ReaderViewModel,
+    density: Float,
+) {
+    val annotation by viewModel.annotationUiState.collectAsState()
+    PdfHighlightOverlay(
+        viewport = viewportState.value,
+        highlights = annotation.highlights,
+        density = density,
+    )
+}
+
 private fun handleMessage(
     raw: String?,
     currentReader: () -> ReaderViewModel,
+    onViewport: (PdfJsMessage.Viewport) -> Unit,
 ) {
     val message = parsePdfJsMessage(raw)
     val summary =
@@ -273,6 +312,12 @@ private fun handleMessage(
                 "page ${message.page}/${message.total}"
             }
             is PdfJsMessage.Selection -> applyPdfSelection(message, currentReader)
+            is PdfJsMessage.Viewport -> {
+                onViewport(message)
+                "viewport page=${message.page} scale=${message.scale} " +
+                    "rect=[${message.pageRect.left},${message.pageRect.top}," +
+                    "${message.pageRect.width},${message.pageRect.height}]"
+            }
             is PdfJsMessage.Error -> "error ${message.message}"
             null -> "unparseable len=${raw?.length ?: 0}"
         }
