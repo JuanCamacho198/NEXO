@@ -106,7 +106,8 @@ class ReaderInteractionStateHolder(
         rect: RectF,
         pageNumber: Int,
         pageRects: List<PdfRect>,
-    ) = selectionManager.onPdfSelection(text, rect, pageNumber, pageRects)
+        pageSize: PdfPageSize? = null,
+    ) = selectionManager.onPdfSelection(text, rect, pageNumber, pageRects, pageSize)
 
     fun onSelectionCleared() = selectionManager.onSelectionCleared()
 

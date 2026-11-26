@@ -17,7 +17,7 @@ data class ChapterLocation(
  * must be recovered from the stored position. Three position formats exist in
  * the database, and all three are handled here:
  *
- * - `"pdfpage:<n>"` → the 1-based page number (caller adds 1).
+ * - `"pdfpage:<n>"` → the **0-based** page index (callers add 1 to display it).
  * - `"readium:<href>"` → the chapter whose href matches, by full path first and
  *   then by filename.
  * - EPUB CFI → the spine index via `epubcfi(/6/<spine>)`, matched against the
@@ -35,7 +35,7 @@ object HighlightLocationResolver {
     private val TOTAL_PROGRESSION_REGEX = Regex("\"totalProgression\"\\s*:\\s*(-?[0-9.eE+]+)")
 
     /**
-     * Extracts the 1-based PDF page number from a `"pdfpage:<n>"` marker.
+     * Extracts the raw **0-based** page index from a `"pdfpage:<n>"` marker, exactly as stored.
      * Returns `null` for any other format.
      */
     fun pdfPageNumber(cfiRange: String): Int? =

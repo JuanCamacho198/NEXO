@@ -73,6 +73,34 @@ data class PdfRect(
     val height: Float,
 )
 
+/** The start page's box at scale 1 in CSS px — the frame a [PdfRect] is expressed in. */
+data class PdfPageSize(
+    val width: Float,
+    val height: Float,
+)
+
+/**
+ * Keeps only the rects that still overlap [page]'s box.
+ *
+ * PDF.js reports every client rect relative to the page where the selection
+ * started, so the part of a selection that continues on the next page arrives
+ * with coordinates past the page edge. Rects entirely outside the box belong to
+ * another page and are dropped; a partial overhang is kept, because it does
+ * overlap the start page and its numbers are already in that page's space.
+ *
+ * Without a page box nothing can be ruled out, so every rect is kept — an old
+ * viewer payload must not silently lose the whole highlight.
+ */
+fun List<PdfRect>.withinStartPage(page: PdfPageSize?): List<PdfRect> {
+    if (page == null) return this
+    return filter { rect ->
+        rect.x < page.width &&
+            rect.x + rect.width > 0f &&
+            rect.y < page.height &&
+            rect.y + rect.height > 0f
+    }
+}
+
 /**
  * Where a PDF selection lives, in the format Phase 3 persists.
  *
@@ -80,8 +108,12 @@ data class PdfRect(
  * one the Readium PDF locator path already yields. `SelectionManager` passes the caller's
  * value through untouched, so callers must hand over a 1-based page. A 0-based index exists
  * only inside the PDF.js bridge dispatch and never reaches this model.
+ *
+ * [pageSize] is the start page's scale-1 box, or null when the payload omits it. [rects] stay
+ * exactly as PDF.js sent them; clamping them to [pageSize] is the consumer's job.
  */
 data class PdfSelectionAnchor(
     val pageNumber: Int,
     val rects: List<PdfRect>,
+    val pageSize: PdfPageSize? = null,
 )

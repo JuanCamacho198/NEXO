@@ -136,6 +136,7 @@ function reportSelection() {
     text,
     rects,
     bounds: { left: b.left, top: b.top, right: b.right, bottom: b.bottom },
+    pageSize: { width: pageRect.width / scale, height: pageRect.height / scale },
     scale,
   });
 }

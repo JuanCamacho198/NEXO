@@ -9,6 +9,7 @@ import com.nexo.domain.model.Highlight
 import com.nexo.domain.model.HighlightColor
 import com.nexo.presentation.viewmodel.reader.HIGHLIGHT_TAP_DEBOUNCE_MS
 import com.nexo.presentation.viewmodel.reader.MENU_CLOSE_IGNORE_MS
+import com.nexo.presentation.viewmodel.reader.PdfPageSize
 import com.nexo.presentation.viewmodel.reader.PdfRect
 import com.nexo.presentation.viewmodel.reader.PdfSelectionAnchor
 import com.nexo.presentation.viewmodel.reader.ReaderSelectionState
@@ -123,11 +124,12 @@ internal class SelectionManager(
         rect: RectF,
         pageNumber: Int,
         pageRects: List<PdfRect>,
+        pageSize: PdfPageSize? = null,
     ) = applySelection(
         text,
         rect,
         null,
-        PdfSelectionAnchor(pageNumber, pageRects),
+        PdfSelectionAnchor(pageNumber, pageRects, pageSize),
         "VM.onPdfSelection",
         "page=$pageNumber rects=${pageRects.size}",
     )

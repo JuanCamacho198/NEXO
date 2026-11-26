@@ -7,6 +7,7 @@ import android.util.Log
 import com.nexo.domain.event.UiEvent
 import com.nexo.domain.model.Highlight
 import com.nexo.domain.model.HighlightColor
+import com.nexo.domain.model.HighlightRect
 import com.nexo.domain.repository.DictionaryRepository
 import com.nexo.domain.repository.ReaderRepository
 import com.nexo.testutil.MainDispatcherRule
@@ -357,6 +358,127 @@ class ReaderInteractionStateHolderTest {
             assertEquals("h1", slot.captured.id)
             assertEquals("#3B82F6", slot.captured.color)
             assertEquals(ReaderSelectionState.None, holder.state.value.selectionState)
+        }
+
+    // ── PDF highlight creation ────────────────────────────────────
+
+    @Test
+    fun `a PDF selection creates a highlight with the anchor page, rects and a 0-based pdfpage cfi`() =
+        runTest {
+            holder = createHolder(scope = this)
+            val rects = listOf(PdfRect(10f, 20f, 30f, 12f), PdfRect(10f, 34f, 18f, 12f))
+            holder.onPdfSelection(
+                text = "selected in a pdf",
+                rect = sampleRectF,
+                pageNumber = 4,
+                pageRects = rects,
+                pageSize = PdfPageSize(width = 595f, height = 842f),
+            )
+
+            holder.onReadiumHighlightColorSelected(
+                color = "#3B82F6",
+                selectedBookId = "book-1",
+                readiumSelectionLocator = null,
+                selectedText = null,
+                bookFormat = "pdf",
+                currentPdfPage = 3,
+                currentChapterIndex = 0,
+            )
+            advanceUntilIdle()
+
+            val slot = slot<Highlight>()
+            coVerify { readerRepository.upsertHighlight(capture(slot), any()) }
+            val captured = slot.captured
+            assertEquals("page stays 1-based", 4, captured.page)
+            // cfiRange stays 0-based to match the restore path (goToPdfPage) and legacy rows.
+            assertEquals("pdfpage:3", captured.cfiRange)
+            assertNull("a PDF selection has no Readium locator", captured.locatorJson)
+            assertEquals(
+                listOf(
+                    HighlightRect(left = 10f, top = 20f, width = 30f, height = 12f),
+                    HighlightRect(left = 10f, top = 34f, width = 18f, height = 12f),
+                ),
+                captured.rects,
+            )
+            assertEquals("selected in a pdf", captured.textContent)
+            assertEquals("#3B82F6", captured.color)
+            assertEquals(ReaderSelectionState.None, holder.state.value.selectionState)
+        }
+
+    @Test
+    fun `a PDF selection keeps only the rects inside the start page box`() =
+        runTest {
+            holder = createHolder(scope = this)
+            holder.onPdfSelection(
+                text = "spills onto the next page",
+                rect = sampleRectF,
+                pageNumber = 2,
+                pageRects =
+                    listOf(
+                        PdfRect(10f, 20f, 30f, 12f),
+                        // Continues on the page below: its origin is past the start page's box.
+                        PdfRect(10f, 845f, 30f, 12f),
+                        // Last line that still fits.
+                        PdfRect(10f, 828f, 30f, 12f),
+                    ),
+                pageSize = PdfPageSize(width = 595f, height = 842f),
+            )
+
+            holder.onReadiumHighlightColorSelected(
+                color = HighlightColor.YELLOW.hex,
+                selectedBookId = "book-1",
+                readiumSelectionLocator = null,
+                selectedText = null,
+                bookFormat = "pdf",
+                currentPdfPage = 1,
+                currentChapterIndex = 0,
+            )
+            advanceUntilIdle()
+
+            val slot = slot<Highlight>()
+            coVerify { readerRepository.upsertHighlight(capture(slot), any()) }
+            assertEquals(
+                listOf(
+                    HighlightRect(left = 10f, top = 20f, width = 30f, height = 12f),
+                    HighlightRect(left = 10f, top = 828f, width = 30f, height = 12f),
+                ),
+                slot.captured.rects,
+            )
+        }
+
+    @Test
+    fun `a selection without a pdf anchor still creates an EPUB highlight`() =
+        runTest {
+            holder = createHolder(scope = this)
+            val locator = mockk<Locator>(relaxed = true)
+            holder.onReadiumSelection(
+                locator = locator,
+                rect = sampleRectF,
+                text = "epub text",
+                existingHighlights = emptyList(),
+            )
+
+            holder.onReadiumHighlightColorSelected(
+                color = HighlightColor.YELLOW.hex,
+                selectedBookId = "book-1",
+                readiumSelectionLocator = null,
+                selectedText = null,
+                bookFormat = "epub",
+                currentPdfPage = 0,
+                currentChapterIndex = 0,
+            )
+            advanceUntilIdle()
+
+            val slot = slot<Highlight>()
+            coVerify { readerRepository.upsertHighlight(capture(slot), any()) }
+            val captured = slot.captured
+            assertTrue(
+                "EPUB keeps the readium: cfi, got ${captured.cfiRange}",
+                captured.cfiRange.startsWith("readium:"),
+            )
+            assertNull("EPUB keeps no page", captured.page)
+            assertNull("EPUB keeps no rects", captured.rects)
+            assertEquals("epub text", captured.textContent)
         }
 
     // ── Tag Input ─────────────────────────────────────────────────
