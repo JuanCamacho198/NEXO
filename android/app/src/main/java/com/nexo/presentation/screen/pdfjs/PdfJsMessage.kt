@@ -18,6 +18,18 @@ data class PdfJsBounds(
     val bottom: Float,
 )
 
+/**
+ * The page element's box inside the WebView viewport: CSS px, top-left origin,
+ * raw from `getBoundingClientRect()`. Negative values are normal — a page
+ * scrolled partly off-screen starts above the viewport.
+ */
+data class PdfJsPageRect(
+    val left: Float,
+    val top: Float,
+    val width: Float,
+    val height: Float,
+)
+
 sealed class PdfJsMessage {
     data class Loaded(
         val numPages: Int,
@@ -26,6 +38,22 @@ sealed class PdfJsMessage {
     data class Page(
         val page: Int,
         val total: Int,
+    ) : PdfJsMessage()
+
+    /**
+     * Where the current page sits inside the WebView's viewport, and the scale its
+     * page-relative rects are drawn at.
+     *
+     * [page] is **1-based**, like every page number PDF.js reports. [scale] is
+     * `viewer.currentScale` — not 1, because the viewer fits the page to the screen
+     * width — and [pageRect] is the page element's `getBoundingClientRect()`, raw
+     * CSS px in viewport space, so a page-relative rect `(x, y)` paints at
+     * `pageRect.left + x * scale`.
+     */
+    data class Viewport(
+        val page: Int,
+        val pageRect: PdfJsPageRect,
+        val scale: Float,
     ) : PdfJsMessage()
 
     data class Selection(
@@ -67,6 +95,7 @@ fun parsePdfJsMessage(raw: String?): PdfJsMessage? {
         "loaded" -> PdfJsMessage.Loaded(json.optInt("numPages"))
         "page" -> PdfJsMessage.Page(json.optInt("page"), json.optInt("total"))
         "selection" -> parsePdfJsSelection(json)
+        "viewport" -> parsePdfJsViewport(json)
         "error" -> PdfJsMessage.Error(json.optString("message"))
         else -> null
     }
@@ -85,6 +114,27 @@ private fun parsePdfJsSelection(json: JSONObject): PdfJsMessage.Selection {
         pageSize = parsePdfJsPageSize(json),
         scale = json.optDouble("scale", 1.0).takeIf { it.isFinite() && it > 0.0 }?.toFloat() ?: 1f,
     )
+}
+
+/**
+ * Where the current page sits and at what scale, or null when the payload cannot
+ * be painted with.
+ *
+ * Unlike a selection's `scale` (which defaults to 1, because a selection only uses
+ * it to normalise its own rects), a viewport with no usable scale is useless:
+ * painting with a guessed 1 would place every highlight by the page-width factor
+ * off. A dropped message leaves the last good viewport in place.
+ */
+private fun parsePdfJsViewport(json: JSONObject): PdfJsMessage.Viewport? {
+    val page = json.optInt("page", 0).takeIf { it >= 1 } ?: return null
+    val raw = json.optJSONObject("pageRect") ?: return null
+    val left = raw.finiteFloat("left") ?: return null
+    val top = raw.finiteFloat("top") ?: return null
+    val width = raw.finiteFloat("width") ?: return null
+    val height = raw.finiteFloat("height") ?: return null
+    if (width <= 0f || height <= 0f) return null
+    val scale = json.optDouble("scale", Double.NaN).takeIf { it.isFinite() && it > 0.0 }?.toFloat() ?: return null
+    return PdfJsMessage.Viewport(page, PdfJsPageRect(left, top, width, height), scale)
 }
 
 /** Reads a numeric member, or null when it is missing, non-numeric, null or not finite. */

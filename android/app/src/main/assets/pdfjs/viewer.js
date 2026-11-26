@@ -52,14 +52,56 @@ let reporting = false;
 const postPage = () =>
   post({ type: 'page', page: viewer.currentPageNumber, total: viewer.pagesCount });
 
+// How often at most a `viewport` message is posted. Scroll and zoom fire far
+// more often than the page's box can change meaningfully, and every message
+// crosses the bridge into a Compose state write.
+const VIEWPORT_THROTTLE_MS = 100;
+
+const currentPageDiv = () => {
+  const pageView = viewer.getPageView(viewer.currentPageNumber - 1);
+  if (pageView && pageView.div) return pageView.div;
+  return document.querySelector('.page[data-page-number="' + viewer.currentPageNumber + '"]');
+};
+
+// Where the current page sits inside the WebView's viewport, in CSS px, plus
+// the scale its page-relative rects are drawn at. Kotlin cannot derive either
+// from a highlight: `rects` are page-relative and `currentScale` is whatever
+// `page-width` resolved to, so painting needs both numbers.
+const postViewport = () => {
+  if (!viewer.pagesCount || !viewer.currentScale) return;
+  const el = currentPageDiv();
+  if (!el) return;
+  const r = el.getBoundingClientRect();
+  if (!(r.width > 0 && r.height > 0)) return;
+  post({
+    type: 'viewport',
+    page: viewer.currentPageNumber,
+    pageRect: { left: r.left, top: r.top, width: r.width, height: r.height },
+    scale: viewer.currentScale,
+  });
+};
+
+let viewportTimer = null;
+const scheduleViewport = () => {
+  if (viewportTimer !== null) return;
+  viewportTimer = setTimeout(() => {
+    viewportTimer = null;
+    postViewport();
+  }, VIEWPORT_THROTTLE_MS);
+};
+
 eventBus.on('pagesinit', () => {
   viewer.currentScaleValue = 'page-width';
   const target = Math.min(Math.max(startPage, 1), viewer.pagesCount);
   viewer.currentPageNumber = target;
   post({ type: 'loaded', numPages: viewer.pagesCount });
+  // The page divs exist but have no box yet at `pagesinit`; the first
+  // `pagerendered` schedules the viewport that can actually be painted with.
+  scheduleViewport();
   setTimeout(() => {
     reporting = true;
     post({ type: 'page', page: target, total: viewer.pagesCount });
+    postViewport();
   }, 250);
 });
 
@@ -68,7 +110,15 @@ eventBus.on('pagechanging', () => {
   if (!reporting) return;
   clearTimeout(pageTimer);
   pageTimer = setTimeout(postPage, 200);
+  scheduleViewport();
 });
+
+// Zoom and rotation move and resize the page inside the viewport, and a scroll
+// changes its offset; both invalidate the painted overlay's origin.
+eventBus.on('scalechanging', scheduleViewport);
+eventBus.on('pagerendered', scheduleViewport);
+container.addEventListener('scroll', scheduleViewport, { passive: true });
+window.addEventListener('resize', scheduleViewport);
 
 window.nexoGoToPage = (n) => {
   const page = Math.trunc(Number(n));

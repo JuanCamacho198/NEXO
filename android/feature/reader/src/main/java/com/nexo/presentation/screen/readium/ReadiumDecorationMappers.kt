@@ -10,7 +10,13 @@ import org.readium.r2.shared.publication.Link
 import org.readium.r2.shared.publication.Publication
 
 private const val HIGHLIGHT_OPAQUE_MASK = 0x00FFFFFF
-private const val HIGHLIGHT_ALPHA_HEX = 0x66
+
+/**
+ * The alpha every highlight tint carries, `0x66`, shared by the Readium decoration
+ * (below) and the PDF.js overlay painter. Public so both painters use the same
+ * number instead of two literals that can drift.
+ */
+const val HIGHLIGHT_ALPHA_HEX = 0x66
 private const val HIGHLIGHT_ALPHA_SHIFT = 24
 
 /**

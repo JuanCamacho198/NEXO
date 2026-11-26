@@ -147,6 +147,35 @@ class PdfJsMessageTest {
     }
 
     @Test
+    fun parsePdfJsMessage_viewport_returnsPageBoxAndScale() {
+        assertEquals(
+            PdfJsMessage.Viewport(
+                page = 4,
+                pageRect = PdfJsPageRect(left = 40f, top = -120.5f, width = 1000f, height = 1414f),
+                scale = 1.6f,
+            ),
+            parsePdfJsMessage(
+                """{"type":"viewport","page":4,"pageRect":{"left":40,"top":-120.5,"width":1000,"height":1414},"scale":1.6}""",
+            ),
+        )
+    }
+
+    @Test
+    fun parsePdfJsMessage_viewportWithoutUsableScale_isDropped() {
+        // Guessing 1 would paint every highlight off by the page-width factor; the
+        // last good viewport is a better answer than a wrong one.
+        assertNull(parsePdfJsMessage("""{"type":"viewport","page":1,"pageRect":{"left":0,"top":0,"width":10,"height":10}}"""))
+        assertNull(parsePdfJsMessage("""{"type":"viewport","page":1,"pageRect":{"left":0,"top":0,"width":10,"height":10},"scale":0}"""))
+    }
+
+    @Test
+    fun parsePdfJsMessage_viewportWithoutPageOrBox_isDropped() {
+        assertNull(parsePdfJsMessage("""{"type":"viewport","page":0,"pageRect":{"left":0,"top":0,"width":10,"height":10},"scale":1}"""))
+        assertNull(parsePdfJsMessage("""{"type":"viewport","page":2,"scale":1}"""))
+        assertNull(parsePdfJsMessage("""{"type":"viewport","page":2,"pageRect":{"left":0,"top":0,"width":0,"height":10},"scale":1}"""))
+    }
+
+    @Test
     fun parsePdfJsMessage_error_returnsMessage() {
         assertEquals(PdfJsMessage.Error("boom"), parsePdfJsMessage("""{"type":"error","message":"boom"}"""))
     }
