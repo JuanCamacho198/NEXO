@@ -168,6 +168,18 @@ fun PdfJsReaderContent(
             target.evaluateJavascript("window.nexoGoToPage(${pageIndex + 1})", null)
         }
     }
+    // Copy, dictionary and a tap outside all dismiss the Compose menu but leave PDF.js's
+    // own DOM range — and its drag handles — painted on the page, because nothing in
+    // viewer.js calls removeAllRanges(). clearSelectionEvent is the app's existing
+    // "selection surface is gone" signal (the Readium path clears its WebView selection
+    // from it too) and it only fires on an explicit dismissal, so a handle drag in
+    // progress is never cut short.
+    LaunchedEffect(webView) {
+        val target = webView ?: return@LaunchedEffect
+        viewModel.clearSelectionEvent.collect {
+            target.evaluateJavascript("(function(){var s=window.getSelection();if(s)s.removeAllRanges();})()", null)
+        }
+    }
     Box(modifier = modifier) {
         AndroidView(
             modifier =
