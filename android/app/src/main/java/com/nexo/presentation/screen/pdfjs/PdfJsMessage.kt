@@ -1,5 +1,6 @@
 package com.nexo.presentation.screen.pdfjs
 
+import com.nexo.presentation.viewmodel.reader.PdfPageSize
 import com.nexo.presentation.viewmodel.reader.PdfRect
 import org.json.JSONArray
 import org.json.JSONObject
@@ -40,6 +41,12 @@ sealed class PdfJsMessage {
         val rects: List<PdfRect>,
         /** Viewport CSS px, or null when the payload has no usable `bounds`. */
         val bounds: PdfJsBounds?,
+        /**
+         * The start page's box at scale 1, or null when the payload has no usable
+         * `pageSize`. Anything that has to map a rect back to the start page's
+         * coordinate space needs it; without it, no rect can be ruled out.
+         */
+        val pageSize: PdfPageSize? = null,
         /** PDF.js `viewer.currentScale`, defaults to 1 when absent or nonsensical. */
         val scale: Float,
     ) : PdfJsMessage() {
@@ -75,6 +82,7 @@ private fun parsePdfJsSelection(json: JSONObject): PdfJsMessage.Selection {
         text = text,
         rects = parsePdfJsRects(json.optJSONArray("rects")),
         bounds = parsePdfJsBounds(json),
+        pageSize = parsePdfJsPageSize(json),
         scale = json.optDouble("scale", 1.0).takeIf { it.isFinite() && it > 0.0 }?.toFloat() ?: 1f,
     )
 }
@@ -115,6 +123,15 @@ private fun parsePdfJsBounds(json: JSONObject): PdfJsBounds? {
         right = maxOf(left, right),
         bottom = maxOf(top, bottom),
     )
+}
+
+/** The start page's box at scale 1, as PDF.js measures it. A half-known box is dropped whole. */
+private fun parsePdfJsPageSize(json: JSONObject): PdfPageSize? {
+    val raw = json.optJSONObject("pageSize") ?: return null
+    val width = raw.finiteFloat("width") ?: return null
+    val height = raw.finiteFloat("height") ?: return null
+    if (width <= 0f || height <= 0f) return null
+    return PdfPageSize(width, height)
 }
 
 fun pdfPageFromLocator(locator: Locator): Int? =

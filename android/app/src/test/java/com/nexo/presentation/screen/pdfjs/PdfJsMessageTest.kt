@@ -1,5 +1,6 @@
 package com.nexo.presentation.screen.pdfjs
 
+import com.nexo.presentation.viewmodel.reader.PdfPageSize
 import com.nexo.presentation.viewmodel.reader.PdfRect
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
@@ -110,6 +111,30 @@ class PdfJsMessageTest {
         assertNull(selection.bounds)
         assertEquals(1f, selection.scale, 0f)
         assertEquals(3, selection.pageNumber)
+    }
+
+    @Test
+    fun parsePdfJsMessage_selectionWithPageSize_keepsTheStartPageBox() {
+        val selection =
+            parsePdfJsMessage(
+                """{"type":"selection","empty":false,"pageNumber":5,"text":"hi",
+                   "rects":[{"x":1,"y":2,"width":3,"height":4}],
+                   "pageSize":{"width":595.28,"height":841.89}}""",
+            ) as PdfJsMessage.Selection
+        assertEquals(PdfPageSize(595.28f, 841.89f), selection.pageSize)
+        assertEquals(listOf(PdfRect(1f, 2f, 3f, 4f)), selection.rects)
+    }
+
+    @Test
+    fun parsePdfJsMessage_selectionWithoutPageSize_leavesItNull() {
+        // An older viewer payload (or a broken box) must still deliver its rects.
+        val selection =
+            parsePdfJsMessage(
+                """{"type":"selection","empty":false,"pageNumber":5,"text":"hi",
+                   "rects":[{"x":1,"y":2,"width":3,"height":4}],"pageSize":{"width":0,"height":841}}""",
+            ) as PdfJsMessage.Selection
+        assertNull(selection.pageSize)
+        assertEquals(listOf(PdfRect(1f, 2f, 3f, 4f)), selection.rects)
     }
 
     @Test

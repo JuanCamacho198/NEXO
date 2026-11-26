@@ -4,11 +4,14 @@ import android.util.Log
 import com.nexo.debug.DebugLog
 import com.nexo.domain.model.Highlight
 import com.nexo.domain.model.HighlightColor
+import com.nexo.domain.model.HighlightRect
 import com.nexo.domain.repository.ReaderRepository
 import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.presentation.viewmodel.CfiMigrator
+import com.nexo.presentation.viewmodel.reader.PdfSelectionAnchor
 import com.nexo.presentation.viewmodel.reader.ReaderSelectionState
 import com.nexo.presentation.viewmodel.reader.lifecycle.Clearable
+import com.nexo.presentation.viewmodel.reader.withinStartPage
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -60,6 +63,8 @@ internal class HighlightManager(
         note: String? = null,
         color: String = HighlightColor.YELLOW.hex,
         locatorJson: String? = null,
+        page: Int? = null,
+        rects: List<HighlightRect>? = null,
     ) {
         scope.launch(mainDispatcher) {
             val highlight =
@@ -73,6 +78,8 @@ internal class HighlightManager(
                     updatedAtEpochMillis = System.currentTimeMillis(),
                     deletedAtEpochMillis = null,
                     locatorJson = locatorJson,
+                    page = page,
+                    rects = rects,
                 )
             readerRepository.upsertHighlight(highlight, activeUser.requireUserId())
             Log.d(TAG, "Highlight created: ${highlight.id}")
@@ -99,8 +106,22 @@ internal class HighlightManager(
             return
         }
         val bookId = selectedBookId ?: return
+        val newSelection = store.value.selectionState as? ReaderSelectionState.New
+        val pdfAnchor = newSelection?.pdfAnchor
+        if (pdfAnchor != null) {
+            // A PDF selection carries no locator, so every fallback below would drop it.
+            createPdfHighlight(
+                bookId = bookId,
+                anchor = pdfAnchor,
+                text = selectedText ?: store.value.selectedText ?: return,
+                color = color,
+            )
+            DebugLog.info(TAG, "Color selected: $color for PDF page ${pdfAnchor.pageNumber}, menu closed")
+            selectionManager.dismissMenuAndClearSelection()
+            return
+        }
         val locator =
-            (store.value.selectionState as? ReaderSelectionState.New)?.locator
+            newSelection?.locator
                 ?: readiumSelectionLocator
                 ?: return
         val text = selectedText ?: store.value.selectedText ?: return
@@ -114,6 +135,35 @@ internal class HighlightManager(
         )
         DebugLog.info(TAG, "Color selected: $color, menu closed")
         selectionManager.dismissMenuAndClearSelection()
+    }
+
+    /**
+     * Persists a highlight for a PDF selection.
+     *
+     * `page` is the anchor's 1-based page, while `cfiRange` keeps the 0-based
+     * `pdfpage:<n>` every existing row and the reader's restore path already use.
+     * `locatorJson` stays null: a PDF selection has no Readium locator.
+     *
+     * v1 scope is one page per highlight, so only the rects that still fall inside the
+     * start page's box are kept — PDF.js reports the rest relative to that same origin.
+     */
+    private fun createPdfHighlight(
+        bookId: String,
+        anchor: PdfSelectionAnchor,
+        text: String,
+        color: String,
+    ) {
+        createHighlight(
+            bookId = bookId,
+            cfiRange = "pdfpage:${anchor.pageNumber - 1}",
+            textContent = text,
+            color = color,
+            page = anchor.pageNumber,
+            rects =
+                anchor.rects.withinStartPage(anchor.pageSize).map {
+                    HighlightRect(left = it.x, top = it.y, width = it.width, height = it.height)
+                },
+        )
     }
 
     fun onReadiumDeleteHighlight(highlightId: String) {

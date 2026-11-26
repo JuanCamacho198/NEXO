@@ -306,6 +306,9 @@ private fun applyPdfSelection(
         pageNumber = pageNumber,
         // Untouched page-relative scale-1 rects: the persistence format Phase 3 reads back.
         pageRects = selection.rects,
+        // The start page's scale-1 box: lets the highlight drop the rects a
+        // multi-page selection drags in from the pages below it.
+        pageSize = selection.pageSize,
     )
     return "selection page=$pageNumber textLen=${selection.textLength} rects=${selection.rects.size}"
 }
